@@ -2,7 +2,7 @@ import argparse
 from urllib.request import urlopen
 import xml.etree.ElementTree as ET
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(description='Fetch spare parts details fro HPE Partsurfer based on serial, product or part number')
 parser.add_argument('-s', '--serial', help='search for serial number')
 args = parser.parse_args()
 
