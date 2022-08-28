@@ -25,6 +25,7 @@ with urlopen('https://partsurfer.hpe.com/Search.aspx?searchText=' + args.serial)
         if flag:
             text.append(line.replace('&nbsp;', ' '))
 
-tree = ET.fromstringlist(text)
-ET.indent(tree)
-ET.dump(tree)
+for row in ET.fromstringlist(text).iter('tr'):
+    for span in row.iter('span'):
+        print(span.text, end='\t')
+    print()
