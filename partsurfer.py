@@ -1,46 +1,72 @@
+#!/usr/bin/python3
+import sys
 import argparse
 from urllib.request import urlopen
 from urllib.parse import urlencode
-from html.parser import HTMLParser
-import xml.etree.ElementTree as ET
+from bs4 import BeautifulSoup
+import csv
 
 parser = argparse.ArgumentParser(description='Fetch spare parts details fro HPE Partsurfer based on serial, product or part number')
-parser.add_argument('-s', '--serial', nargs='+', help='search for serial number')
+group = parser.add_mutually_exclusive_group()
+group.add_argument('-s', '--serial', action='store_true', help='search for serial number(s)')
+group.add_argument('-p', '--product', action='store_true', help='search for product number(s)')
+group.add_argument('-n', '--part', action='store_true', help='search for part number(s)')
+parser.add_argument('NUM', nargs='+', help='number(s) to search for')
+parser.add_argument('-o', '--output', help='send output to file')
 args = parser.parse_args()
 
-class MyHTMLParser(HTMLParser):
-    def handle_starttag(self, tag, attrs):
-        global count
-        if tag == 'div' and count > 0:
-            count = count + 1
-        if tag == 'div' and ('id', 'tab2') in attrs:
-            count = 1
+# print(args)
+if len(sys.argv) == 1:
+    parser.print_usage()
+    parser.exit(1)
 
-    def handle_endtag(self, tag):
-        global count
-        if tag == 'div' and count > 0:
-            count = count - 1
+if args.output:
+    f = open(args.output, 'w', newline='')
+else:
+    f = sys.stdout
 
-parser = MyHTMLParser()
+csv_writer = csv.writer(f)
 
-for serial in args.serial:
-    count = 0
-    text = []
-    with urlopen('https://partsurfermobile.ext.hpe.com/', data=urlencode({'SelectedCountryID': '', 'SearchString': serial}).encode('ascii')) as response:
-    #with urlopen('file:index.html.1') as response:
-        for line in response:
-            line = line.decode().strip()
-            if not len(line):
-                continue
-            parser.feed(str(line))
-            if count > 0:
-                text.append(line.replace('&','&amp;'))
-        text.append('</div>')
-    for row in ET.fromstringlist(text).iter('ul'):
-        a = row.find('li[1]')
-        b = a.find('a')
-        if b != None:
-            print(b.text, end='\t')
-        b = a.find('strong')
-        if b != None:
-            print(b.tail)
+for num in args.NUM:
+    with urlopen('https://partsurfermobile.ext.hpe.com/', data=urlencode({'SelectedCountryID': '', 'SearchString': num}).encode('ascii')) as response:
+        page = BeautifulSoup(response.read(), 'lxml')
+        if page.find('div', class_='message error'):
+            print('Error for {}'.format(num), file=sys.stderr)
+            continue
+        if args.serial:
+            csv_writer.writerow(['Serial','Part','Description'])
+            parts = page.find('div' , id = 'tab2').find_all('a')
+            descs = page.find('div' , id = 'tab2').find_all('strong')
+            i = len(parts) - 1
+            while i >= 0:
+                if descs[i].text == 'Description: ':
+                    csv_writer.writerow([num, parts[i].text, descs[i].next_sibling.text])
+                i = i - 1
+        if args.product:
+            csv_writer.writerow(['Product','Part','Description'])
+            items = page.find_all('ul' , class_='cols2 compare')
+            r = [num]
+            for i in items:
+                lines = i.find_all('strong')
+                for l in lines:
+                    if l.text == 'Part No: ':
+                        r.append(l.next_sibling)
+                    if l.text == 'Description: ':
+                        r.append(l.next_sibling)
+                        csv_writer.writerow(r)
+                        r = [num]
+                        break
+        if args.part:
+            csv_writer.writerow(['Part','Description'])
+            items = page.find_all('div', class_='section')[1].find_all('div', class_='section')
+            r = [num]
+            for i in items:
+                lines = i.find_all('strong')
+                for l in lines:
+                    if l.text == 'Part No: ':
+                        r.append(l.next_sibling)
+                    if l.text == 'Description: ':
+                        r.append(l.next_sibling)
+                        csv_writer.writerow(r)
+                        r = [num]
+                        break
