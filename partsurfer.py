@@ -1,12 +1,21 @@
 import argparse
+import sys
 from urllib.request import urlopen
 from urllib.parse import urlencode
 from html.parser import HTMLParser
 import xml.etree.ElementTree as ET
 
-parser = argparse.ArgumentParser(description='Fetch spare parts details fro HPE Partsurfer based on serial, product or part number')
-parser.add_argument('-s', '--serial', nargs='+', help='search for serial number')
+parser = argparse.ArgumentParser(description='Fetch spare parts details fro HPE Partsurfer based on serial, product or part number', argument_default=argparse.SUPPRESS)
+group = parser.add_mutually_exclusive_group()
+group.add_argument('-s', '--serial', action='store_true', help='search for serial number(s)')
+group.add_argument('-p', '--product', action='store_false', help='search for product number(s)')
+group.add_argument('-n', '--part', action='store_false', help='search for part number(s)')
+parser.add_argument('NUM', nargs='+', help='number(s) to search for')
 args = parser.parse_args()
+
+if len(sys.argv) == 1:
+    parser.print_usage()
+    parser.exit()
 
 class MyHTMLParser(HTMLParser):
     def handle_starttag(self, tag, attrs):
@@ -23,7 +32,7 @@ class MyHTMLParser(HTMLParser):
 
 parser = MyHTMLParser()
 
-for serial in args.serial:
+for serial in args.NUM:
     count = 0
     text = []
     with urlopen('https://partsurfermobile.ext.hpe.com/', data=urlencode({'SelectedCountryID': '', 'SearchString': serial}).encode('ascii')) as response:
