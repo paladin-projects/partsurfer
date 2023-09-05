@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import sys
 import argparse
 from urllib.request import urlopen
@@ -31,13 +32,19 @@ for num in args.NUM:
         page = BeautifulSoup(response.read(), 'lxml')
         if page.find('div', class_='message error'):
             print('Error for {}'.format(num), file=sys.stderr)
+            continue
         if args.serial:
             csv_writer.writerow(['Serial','Part','Description'])
+            parts = page.find('div' , id = 'tab2').find_all('a')
+            descs = page.find('div' , id = 'tab2').find_all('strong')
+            i = len(parts) - 1
+            while i >= 0:
+                if descs[i].text == 'Description: ':
+                    csv_writer.writerow([num, parts[i].text, descs[i].next_sibling.text])
+                i = i - 1
         if args.product:
             csv_writer.writerow(['Product','Part','Description'])
             items = page.find_all('ul' , class_='cols2 compare')
-            # print(lines)
-            # sys.exit()
             r = [num]
             for i in items:
                 lines = i.find_all('strong')
@@ -51,3 +58,15 @@ for num in args.NUM:
                         break
         if args.part:
             csv_writer.writerow(['Part','Description'])
+            items = page.find_all('div', class_='section')[1].find_all('div', class_='section')
+            r = [num]
+            for i in items:
+                lines = i.find_all('strong')
+                for l in lines:
+                    if l.text == 'Part No: ':
+                        r.append(l.next_sibling)
+                    if l.text == 'Description: ':
+                        r.append(l.next_sibling)
+                        csv_writer.writerow(r)
+                        r = [num]
+                        break
