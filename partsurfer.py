@@ -13,6 +13,7 @@ group.add_argument('-p', '--product', action='store_true', help='search for prod
 group.add_argument('-n', '--part', action='store_true', help='search for part number(s)')
 parser.add_argument('NUM', nargs='+', help='number(s) to search for')
 parser.add_argument('-o', '--output', help='append output to file')
+parser.add_argument('-k', '--skip-headers', action='store_true', help='skip headers (useful for appending to existing file')
 args = parser.parse_args()
 
 # print(args)
@@ -34,17 +35,21 @@ for num in args.NUM:
             print('Error for {}'.format(num), file=sys.stderr)
             continue
         if args.serial:
-            csv_writer.writerow(['Serial','Part','Description'])
             parts = page.find('div' , id = 'tab2').find_all('a')
             descs = page.find('div' , id = 'tab2').find_all('strong')
+            if not args.skip_headers:
+                csv_writer.writerow(['Serial','Part','Description'])
+                args.skip_headers = True
             i = len(parts) - 1
             while i >= 0:
                 if descs[i].text == 'Description: ':
                     csv_writer.writerow([num, parts[i].text, descs[i].next_sibling.text])
                 i = i - 1
         if args.product:
-            csv_writer.writerow(['Product','Part','Description'])
             items = page.find_all('ul' , class_='cols2 compare')
+            if not args.skip_headers:
+                csv_writer.writerow(['Product','Part','Description'])
+                args.skip_headers = True
             r = [num]
             for i in items:
                 lines = i.find_all('strong')
@@ -57,8 +62,10 @@ for num in args.NUM:
                         r = [num]
                         break
         if args.part:
-            csv_writer.writerow(['Part','Description'])
             items = page.find_all('div', class_='section')[1].find_all('div', class_='section')
+            if not args.skip_headers:
+                csv_writer.writerow(['Part','Description'])
+                args.skip_headers = True
             r = [num]
             for i in items:
                 lines = i.find_all('strong')

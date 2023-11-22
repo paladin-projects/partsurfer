@@ -18,7 +18,7 @@ options:
   -n, --part            search for part number(s)
   -o OUTPUT, --output OUTPUT
                         append output to file
-
+  -k, --skip-headers    skip headers (useful for appending to existing file
 </pre>
 
 Script runs in 3 modes:
