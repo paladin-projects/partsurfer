@@ -17,7 +17,7 @@ options:
   -p, --product         search for product number(s)
   -n, --part            search for part number(s)
   -o OUTPUT, --output OUTPUT
-                        send output to file
+                        append output to file
 
 </pre>
 
@@ -25,4 +25,4 @@ Script runs in 3 modes:
 
  * When run with `-s` option, all other arguments are considered HPE serial numbers
  * When run with `-p` option, all other arguments are considered HPE product numbers
- * Whern run with `-n` option, all other argumetns are considered HPE part numbers
+ * When run with `-n` option, all other argumetns are considered HPE part numbers

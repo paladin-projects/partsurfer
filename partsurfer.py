@@ -12,7 +12,7 @@ group.add_argument('-s', '--serial', action='store_true', help='search for seria
 group.add_argument('-p', '--product', action='store_true', help='search for product number(s)')
 group.add_argument('-n', '--part', action='store_true', help='search for part number(s)')
 parser.add_argument('NUM', nargs='+', help='number(s) to search for')
-parser.add_argument('-o', '--output', help='send output to file')
+parser.add_argument('-o', '--output', help='append output to file')
 args = parser.parse_args()
 
 # print(args)
@@ -21,7 +21,7 @@ if len(sys.argv) == 1:
     parser.exit(1)
 
 if args.output:
-    f = open(args.output, 'w', newline='')
+    f = open(args.output, 'a', newline='')
 else:
     f = sys.stdout
 
