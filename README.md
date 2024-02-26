@@ -26,3 +26,7 @@ Script runs in 3 modes:
  * When run with `-s` option, all other arguments are considered HPE serial numbers
  * When run with `-p` option, all other arguments are considered HPE product numbers
  * When run with `-n` option, all other argumetns are considered HPE part numbers
+
+
+# Dependencies
+`sudo apt install python3-httpx python3-h2`
