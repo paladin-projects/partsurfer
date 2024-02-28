@@ -30,3 +30,10 @@ Script runs in 3 modes:
 
 # Dependencies
 `sudo apt install python3-httpx python3-h2`
+
+# Using with Windows
+ * Install Python from Microsoft Store.
+ * Install dependencies:
+ `pip install lxml bs4 h2 httpx`
+ * Open Command Prompt.
+ * Type `python partsurfer.py -h`
