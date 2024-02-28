@@ -33,7 +33,6 @@ Script runs in 3 modes:
 
 # Using with Windows
  * Install Python from Microsoft Store.
- * Install dependencies:
- `pip install lxml bs4 h2 httpx`
  * Open Command Prompt.
+ * Install dependencies: `pip install lxml bs4 h2 httpx`
  * Type `python partsurfer.py -h`
