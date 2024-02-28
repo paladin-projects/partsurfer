@@ -10,7 +10,7 @@ import re
 
 from pprint import pprint
 
-parser = argparse.ArgumentParser(description='Fetch spare parts details fro HPE Partsurfer based on serial, product or part number')
+parser = argparse.ArgumentParser(description='Fetch spare parts details from HPE PartSurfer based on serial, product or part number')
 group = parser.add_mutually_exclusive_group()
 group.add_argument('-s', '--serial', action='store_true', help='search for serial number(s)')
 group.add_argument('-p', '--product', action='store_true', help='search for product number(s)')
