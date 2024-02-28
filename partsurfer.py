@@ -8,6 +8,8 @@ from bs4 import BeautifulSoup
 import csv
 import re
 
+from pprint import pprint
+
 parser = argparse.ArgumentParser(description='Fetch spare parts details fro HPE Partsurfer based on serial, product or part number')
 group = parser.add_mutually_exclusive_group()
 group.add_argument('-s', '--serial', action='store_true', help='search for serial number(s)')
@@ -29,6 +31,7 @@ else:
     f = sys.stdout
 
 csv_writer = csv.writer(f)
+url = 'https://partsurfer.hpe.com/Search.aspx'
 
 def parse_serial(bs, n):
     parts = bs.find('table', id='ctl00_BodyContentPlaceHolder_gridSpareBOM').find_all('tr', class_=re.compile('RowStyle|AlternateRowStyle'))
@@ -61,7 +64,7 @@ def parse_part(bs, n):
         except:
             continue
 
-async def parse(bs, n):
+def parse(bs, n):
     if bs.find('div', class_='message error'):
         print('Error for {}'.format(num), file=sys.stderr)
         return
@@ -82,15 +85,19 @@ def print_headers():
     if args.part:
         csv_writer.writerow(['Part','Description'])
 
+async def fetch_parse(c, n):
+    response = await c.get(url, params={"searchText": n})
+    page = BeautifulSoup(response.text, 'lxml')
+    if page:
+        parse(page, n)
+
 async def main():
     print_headers()
     async with AsyncClient(http2=True) as client:
+        tasks = []
         for num in args.NUM:
-            params = {"searchText": num}
-            response = await client.get('https://partsurfer.hpe.com/Search.aspx', params=params)
-            page = BeautifulSoup(response.text, 'lxml')
-            if page:
-                await parse(page, num)
+            tasks.append(asyncio.ensure_future(fetch_parse(client, num)))
+        await asyncio.gather(*tasks, return_exceptions=True)
 
 if __name__ == "__main__":
     asyncio.run(main())
