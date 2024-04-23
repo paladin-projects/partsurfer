@@ -4,6 +4,7 @@ import asyncio
 import sys
 import argparse
 
+import requests
 from httpx import AsyncClient
 from bs4 import BeautifulSoup
 import csv
@@ -34,21 +35,39 @@ csv_writer = csv.writer(f)
 url = 'https://partsurfer.hpe.com/Search.aspx'
 
 
-def parse_serial(bs, n):
+def parse_serial(bs, n: str):
     try:
-        if n.find(":"):
-            parts = bs.find('table', id='ctl00_BodyContentPlaceHolder_radProd').find_all('tr')
-            for p in parts:
-                print(p.text)
-        else:
-            parts = bs.find('table', id='ctl00_BodyContentPlaceHolder_gridSpareBOM').find_all('tr', class_=re.compile('RowStyle|AlternateRowStyle'))
-            for p in parts:
-                part = p.find('span', id=re.compile('ctl\d\d_BodyContentPlaceHolder_gridSpareBOM_ctl\d\d_lblspart\d'))
-                desc = p.find('span', id=re.compile('ctl\d\d_BodyContentPlaceHolder_gridSpareBOM_ctl\d\d_lblspartdesc\d'))
-                try:
-                    csv_writer.writerow([n, part.text, desc.text])
-                except:
-                    continue
+        if n.find(":") != -1:
+            payload = {'ctl00$BodyContentPlaceHolder$radProd': n.split(":")[1],
+                       'tl00$BodyContentPlaceHolder$SearchText$TextBox1': n.split(":")[0],
+                       'ctl00$BodyContentPlaceHolder$btnProdSubmit': 'View Selected Product Details',
+                       'ctl00$BodyContentPlaceHolder$ddlCountry': 'RU',
+                       'ctl00$BodyContentPlaceHolder$hdnCCodeFlag': 'N',
+                       'ctl00$BodyContentPlaceHolder$hdnAddPartsFlag': 'N',
+                       'ctl00$BodyContentPlaceHolder$hdnstrType': 'SERIAL',
+                       'ctl00$BodyContentPlaceHolder$hdnSearchText': n.split(":")[0],
+                       'ctl00$BodyContentPlaceHolder$hHPPSFlag': 'N',
+                       # кажется предыдущая страница может быть любой
+                       '__PREVIOUSPAGE':'4GZf8TWEN3bVEucnXzt6mX48yJg707Q1BbEdhPXFx_uOqMzsU3A89-gBErwvKXTKMhlPPAT48HhBzgj2vATua6y-MYI1',
+                       '__SCROLLPOSITIONY': 0,
+                       '__SCROLLPOSITIONX': 0,
+                       '__VIEWSTATEGENERATOR': 'BBBC20B8',
+                       '__VIEWSTATE': bs.find(id='__VIEWSTATE').get('value')
+                       }
+            resp = requests.post(url+"?searchText="+n.split(":")[0], data=payload)
+            bs = BeautifulSoup(resp.text, 'lxml')
+            # print(resp.text)
+            # f_ = open('D:/ITMO/SideProjects/partsurfer/test1.html', 'w+')
+            # f_.write(resp.text)
+            # f_.close()
+        parts = bs.find('table', id='ctl00_BodyContentPlaceHolder_gridSpareBOM').find_all('tr', class_=re.compile('RowStyle|AlternateRowStyle'))
+        for p in parts:
+            part = p.find('span', id=re.compile('ctl\d\d_BodyContentPlaceHolder_gridSpareBOM_ctl\d\d_lblspart\d'))
+            desc = p.find('span', id=re.compile('ctl\d\d_BodyContentPlaceHolder_gridSpareBOM_ctl\d\d_lblspartdesc\d'))
+            try:
+                csv_writer.writerow([n, part.text, desc.text])
+            except:
+                continue
     except AttributeError:
         try:
             parts = bs.find('table', id='ctl00_BodyContentPlaceHolder_radProd').find_all('label')
@@ -118,6 +137,7 @@ def print_headers():
 async def fetch_parse(c: AsyncClient, n: str):
     # Если это поиск по серийнику, то формат будет Серийник:Продукт. Таким образом все коды будут искаться без проблем,
     # а серийник будет отделяться от номера продукта для 'первого' поиска
+    print(f"Looking for number {n.split(':')[0]}")
     response = await c.get(url, params={"searchText": n.split(":")[0]})
 
     if response.status_code != 200:
