@@ -44,15 +44,8 @@ def parse_serial(bs, n: str):
                        'ctl00$BodyContentPlaceHolder$btnProdSubmit': 'View Selected Product Details',
                        'ctl00$BodyContentPlaceHolder$hdnstrType': 'SERIAL',
                        'ctl00$BodyContentPlaceHolder$hdnSearchText': n.split(":")[0],
-                       # 'ctl00$BodyContentPlaceHolder$ddlCountry': 'RU',
-                       # 'ctl00$BodyContentPlaceHolder$hdnCCodeFlag': 'N',
-                       # 'ctl00$BodyContentPlaceHolder$hdnAddPartsFlag': 'N',
-                       # 'ctl00$BodyContentPlaceHolder$hHPPSFlag': 'N',
                        # КОСТЫЛЬ!!!, но кажется предыдущая страница может быть любой, нельзя получить через BeautifulSoup
                        '__PREVIOUSPAGE': '4GZf8TWEN3bVEucnXzt6mX48yJg707Q1BbEdhPXFx_uOqMzsU3A89-gBErwvKXTKMhlPPAT48HhBzgj2vATua6y-MYI1',
-                       # '__SCROLLPOSITIONY': 0,
-                       # '__SCROLLPOSITIONX': 0,
-                       # '__VIEWSTATEGENERATOR': 'BBBC20B8',
                        '__VIEWSTATE': bs.find(id='__VIEWSTATE').get('value')
                        }
             resp = requests.post(url+"?searchText="+n.split(":")[0], data=payload)
@@ -77,9 +70,6 @@ def parse_serial(bs, n: str):
         except AttributeError:
             print(f"No results for serial number: {n}", file=sys.stderr)
             sys.exit(1)
-    # Иногда программа заканчивает до выполнения всех таск, ловим...
-    except Exception as err:
-        print(type(err).__name__, file=sys.stderr)
 
 
 def parse_product(bs, n):
@@ -136,8 +126,6 @@ def print_headers():
 
 
 async def fetch_parse(c: AsyncClient, n: str):
-    # Если это поиск по серийнику, то формат будет Серийник:Продукт. Таким образом все коды будут искаться без проблем,
-    # а серийник будет отделяться от номера продукта для 'первого' поиска
     print(f"Looking for number {n.split(':')[0]}")
     response = await c.get(url, params={"searchText": n.split(":")[0]})
 
