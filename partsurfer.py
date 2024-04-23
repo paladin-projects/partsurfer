@@ -3,12 +3,12 @@
 import asyncio
 import sys
 import argparse
+
 from httpx import AsyncClient
 from bs4 import BeautifulSoup
 import csv
 import re
 
-from pprint import pprint
 
 parser = argparse.ArgumentParser(description='Fetch spare parts details from HPE PartSurfer based on serial, product or part number')
 group = parser.add_mutually_exclusive_group()
@@ -33,40 +33,64 @@ else:
 csv_writer = csv.writer(f)
 url = 'https://partsurfer.hpe.com/Search.aspx'
 
+
 def parse_serial(bs, n):
-    parts = bs.find('table', id='ctl00_BodyContentPlaceHolder_gridSpareBOM').find_all('tr', class_=re.compile('RowStyle|AlternateRowStyle'))
-    for i in range(len(parts)):
-        part = parts[i].find('span', id=re.compile('ctl\d\d_BodyContentPlaceHolder_gridSpareBOM_ctl\d\d_lblspart\d'))
-        desc = parts[i].find('span', id=re.compile('ctl\d\d_BodyContentPlaceHolder_gridSpareBOM_ctl\d\d_lblspartdesc\d'))
+    try:
+        parts = bs.find('table', id='ctl00_BodyContentPlaceHolder_gridSpareBOM').find_all('tr', class_=re.compile(
+            'RowStyle|AlternateRowStyle'))
+        for p in parts:
+            part = p.find('span', id=re.compile('ctl\d\d_BodyContentPlaceHolder_gridSpareBOM_ctl\d\d_lblspart\d'))
+            desc = p.find('span', id=re.compile('ctl\d\d_BodyContentPlaceHolder_gridSpareBOM_ctl\d\d_lblspartdesc\d'))
+            try:
+                csv_writer.writerow([n, part.text, desc.text])
+            except:
+                continue
+    except AttributeError:
         try:
-            csv_writer.writerow([n, part.text, desc.text])
-        except:
-            continue
+            parts = bs.find('table', id='ctl00_BodyContentPlaceHolder_radProd').find_all('label')
+            nums = []
+            for p in parts:
+                nums.append(p.text)
+            print(f"Several products found for serial {n}:\n{nums}", file=sys.stderr)
+            sys.exit(1)
+        except AttributeError:
+            print(f"No results for serial number: {n}", file=sys.stderr)
+            sys.exit(1)
 
 
 def parse_product(bs, n):
-    parts = bs.find('div', id='ctl00_BodyContentPlaceHolder_dvProdinfo').find_all('tr')
-    for i in range(len(parts)):
-        part = parts[i].find('a', id=re.compile('ctl\d\d_BodyContentPlaceHolder_rptRoot_ctl\d\d_gvProGeneral_ctl\d\d_lnkPartno'))
-        desc = parts[i].find('span', id=re.compile('ctl\d\d_BodyContentPlaceHolder_rptRoot_ctl\d\d_gvProGeneral_ctl\d\d_lbldesc'))
-        try:
-            csv_writer.writerow([n, part.text, desc.text])
-        except:
-            continue
+    try:
+        parts = bs.find('div', id='ctl00_BodyContentPlaceHolder_dvProdinfo').find_all('tr')
+        for p in parts:
+            part = p.find('a', id=re.compile('ctl\d\d_BodyContentPlaceHolder_rptRoot_ctl\d\d_gvProGeneral_ctl\d\d_lnkPartno'))
+            desc = p.find('span', id=re.compile('ctl\d\d_BodyContentPlaceHolder_rptRoot_ctl\d\d_gvProGeneral_ctl\d\d_lbldesc'))
+            try:
+                csv_writer.writerow([n, part.text, desc.text])
+            except:
+                continue
+    except AttributeError:
+        print(f"No results for product number: {n}", file=sys.stderr)
+        sys.exit(1)
+
 
 def parse_part(bs, n):
-    parts = bs.find('table', id='ctl00_BodyContentPlaceHolder_gvGeneral').find_all('tr', class_=re.compile('RowStyle|AlternateRowStyle'))
-    for i in range(len(parts)):
-        part = parts[i].find('span', id=re.compile('ctl\d\d_BodyContentPlaceHolder_gvGeneral_ctl\d\d_lnkPartno'))
-        desc = parts[i].find('span', id=re.compile('ctl\d\d_BodyContentPlaceHolder_gvGeneral_ctl\d\d_lblpartdesc\d'))
-        try:
-            csv_writer.writerow([part.text, desc.text])
-        except:
-            continue
+    try:
+        parts = bs.find('table', id='ctl00_BodyContentPlaceHolder_gvGeneral').find_all('tr', class_=re.compile('RowStyle|AlternateRowStyle'))
+        for p in parts:
+            part = p.find('span', id=re.compile('ctl\d\d_BodyContentPlaceHolder_gvGeneral_ctl\d\d_lnkPartno'))
+            desc = p.find('span', id=re.compile('ctl\d\d_BodyContentPlaceHolder_gvGeneral_ctl\d\d_lblpartdesc\d'))
+            try:
+                csv_writer.writerow([part.text, desc.text])
+            except:
+                continue
+    except AttributeError:
+        print(f"No results for part number: {n}", file=sys.stderr)
+        sys.exit(1)
+
 
 def parse(bs, n):
     if bs.find('div', class_='message error'):
-        print('Error for {}'.format(num), file=sys.stderr)
+        print('Error for {}'.format(n), file=sys.stderr)
         return
     if args.serial:
         parse_serial(bs, n)
@@ -75,21 +99,30 @@ def parse(bs, n):
     if args.part:
         parse_part(bs, n)
 
+
 def print_headers():
     if args.skip_headers:
         return
     if args.serial:
-        csv_writer.writerow(['Serial', 'Part','Description'])
+        csv_writer.writerow(['Serial', 'Part', 'Description'])
     if args.product:
-        csv_writer.writerow(['Product', 'Part','Description'])
+        csv_writer.writerow(['Product', 'Part', 'Description'])
     if args.part:
-        csv_writer.writerow(['Part','Description'])
+        csv_writer.writerow(['Part', 'Description'])
 
-async def fetch_parse(c, n):
+
+async def fetch_parse(c: AsyncClient, n: str):
     response = await c.get(url, params={"searchText": n})
+    if response.status_code != 200:
+        print(f"Site is not available, status code: {response.status_code}. Prompt number: {n}", file=sys.stderr)
+        sys.exit(1)
     page = BeautifulSoup(response.text, 'lxml')
+    if  page.find('span', class_=re.compile('ctl00_BodyContentPlaceHolder_lblErrorMsg')):
+        print("Internal server error occurred", file=sys.stderr)
+        sys.exit(1)
     if page:
         parse(page, n)
+
 
 async def main():
     print_headers()
@@ -98,6 +131,7 @@ async def main():
         for num in args.NUM:
             tasks.append(asyncio.ensure_future(fetch_parse(client, num)))
         await asyncio.gather(*tasks, return_exceptions=True)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
