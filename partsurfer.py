@@ -38,28 +38,26 @@ url = 'https://partsurfer.hpe.com/Search.aspx'
 def parse_serial(bs, n: str):
     try:
         if n.find(":") != -1:
+            # Проверить, все ли параметры нужны
             payload = {'ctl00$BodyContentPlaceHolder$radProd': n.split(":")[1],
                        'tl00$BodyContentPlaceHolder$SearchText$TextBox1': n.split(":")[0],
                        'ctl00$BodyContentPlaceHolder$btnProdSubmit': 'View Selected Product Details',
-                       'ctl00$BodyContentPlaceHolder$ddlCountry': 'RU',
-                       'ctl00$BodyContentPlaceHolder$hdnCCodeFlag': 'N',
-                       'ctl00$BodyContentPlaceHolder$hdnAddPartsFlag': 'N',
                        'ctl00$BodyContentPlaceHolder$hdnstrType': 'SERIAL',
                        'ctl00$BodyContentPlaceHolder$hdnSearchText': n.split(":")[0],
-                       'ctl00$BodyContentPlaceHolder$hHPPSFlag': 'N',
-                       # кажется предыдущая страница может быть любой
-                       '__PREVIOUSPAGE':'4GZf8TWEN3bVEucnXzt6mX48yJg707Q1BbEdhPXFx_uOqMzsU3A89-gBErwvKXTKMhlPPAT48HhBzgj2vATua6y-MYI1',
-                       '__SCROLLPOSITIONY': 0,
-                       '__SCROLLPOSITIONX': 0,
-                       '__VIEWSTATEGENERATOR': 'BBBC20B8',
+                       # 'ctl00$BodyContentPlaceHolder$ddlCountry': 'RU',
+                       # 'ctl00$BodyContentPlaceHolder$hdnCCodeFlag': 'N',
+                       # 'ctl00$BodyContentPlaceHolder$hdnAddPartsFlag': 'N',
+                       # 'ctl00$BodyContentPlaceHolder$hHPPSFlag': 'N',
+                       # КОСТЫЛЬ!!!, но кажется предыдущая страница может быть любой, нельзя получить через BeautifulSoup
+                       '__PREVIOUSPAGE': '4GZf8TWEN3bVEucnXzt6mX48yJg707Q1BbEdhPXFx_uOqMzsU3A89-gBErwvKXTKMhlPPAT48HhBzgj2vATua6y-MYI1',
+                       # '__SCROLLPOSITIONY': 0,
+                       # '__SCROLLPOSITIONX': 0,
+                       # '__VIEWSTATEGENERATOR': 'BBBC20B8',
                        '__VIEWSTATE': bs.find(id='__VIEWSTATE').get('value')
                        }
             resp = requests.post(url+"?searchText="+n.split(":")[0], data=payload)
             bs = BeautifulSoup(resp.text, 'lxml')
-            # print(resp.text)
-            # f_ = open('D:/ITMO/SideProjects/partsurfer/test1.html', 'w+')
-            # f_.write(resp.text)
-            # f_.close()
+
         parts = bs.find('table', id='ctl00_BodyContentPlaceHolder_gridSpareBOM').find_all('tr', class_=re.compile('RowStyle|AlternateRowStyle'))
         for p in parts:
             part = p.find('span', id=re.compile('ctl\d\d_BodyContentPlaceHolder_gridSpareBOM_ctl\d\d_lblspart\d'))
@@ -79,6 +77,9 @@ def parse_serial(bs, n: str):
         except AttributeError:
             print(f"No results for serial number: {n}", file=sys.stderr)
             sys.exit(1)
+    # Иногда программа заканчивает до выполнения всех таск, ловим...
+    except Exception as err:
+        print(type(err).__name__, file=sys.stderr)
 
 
 def parse_product(bs, n):
