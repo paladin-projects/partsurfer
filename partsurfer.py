@@ -4,6 +4,7 @@ import asyncio
 import sys
 import argparse
 
+import requests
 from httpx import AsyncClient
 from bs4 import BeautifulSoup
 import csv
@@ -34,10 +35,23 @@ csv_writer = csv.writer(f)
 url = 'https://partsurfer.hpe.com/Search.aspx'
 
 
-def parse_serial(bs, n):
+def parse_serial(bs, n: str):
     try:
-        parts = bs.find('table', id='ctl00_BodyContentPlaceHolder_gridSpareBOM').find_all('tr', class_=re.compile(
-            'RowStyle|AlternateRowStyle'))
+        if n.find(":") != -1:
+            # Проверить, все ли параметры нужны
+            payload = {'ctl00$BodyContentPlaceHolder$radProd': n.split(":")[1],
+                       'tl00$BodyContentPlaceHolder$SearchText$TextBox1': n.split(":")[0],
+                       'ctl00$BodyContentPlaceHolder$btnProdSubmit': 'View Selected Product Details',
+                       'ctl00$BodyContentPlaceHolder$hdnstrType': 'SERIAL',
+                       'ctl00$BodyContentPlaceHolder$hdnSearchText': n.split(":")[0],
+                       # КОСТЫЛЬ!!!, но кажется предыдущая страница может быть любой, нельзя получить через BeautifulSoup
+                       '__PREVIOUSPAGE': '4GZf8TWEN3bVEucnXzt6mX48yJg707Q1BbEdhPXFx_uOqMzsU3A89-gBErwvKXTKMhlPPAT48HhBzgj2vATua6y-MYI1',
+                       '__VIEWSTATE': bs.find(id='__VIEWSTATE').get('value')
+                       }
+            resp = requests.post(url+"?searchText="+n.split(":")[0], data=payload)
+            bs = BeautifulSoup(resp.text, 'lxml')
+
+        parts = bs.find('table', id='ctl00_BodyContentPlaceHolder_gridSpareBOM').find_all('tr', class_=re.compile('RowStyle|AlternateRowStyle'))
         for p in parts:
             part = p.find('span', id=re.compile('ctl\d\d_BodyContentPlaceHolder_gridSpareBOM_ctl\d\d_lblspart\d'))
             desc = p.find('span', id=re.compile('ctl\d\d_BodyContentPlaceHolder_gridSpareBOM_ctl\d\d_lblspartdesc\d'))
@@ -112,14 +126,19 @@ def print_headers():
 
 
 async def fetch_parse(c: AsyncClient, n: str):
-    response = await c.get(url, params={"searchText": n})
+    print(f"Looking for number {n.split(':')[0]}")
+    response = await c.get(url, params={"searchText": n.split(":")[0]})
+
     if response.status_code != 200:
         print(f"Site is not available, status code: {response.status_code}. Prompt number: {n}", file=sys.stderr)
         sys.exit(1)
+
     page = BeautifulSoup(response.text, 'lxml')
-    if  page.find('span', class_=re.compile('ctl00_BodyContentPlaceHolder_lblErrorMsg')):
+
+    if page.find('span', class_=re.compile('ctl00_BodyContentPlaceHolder_lblErrorMsg')):
         print("Internal server error occurred", file=sys.stderr)
         sys.exit(1)
+
     if page:
         parse(page, n)
 
