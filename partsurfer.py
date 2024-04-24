@@ -48,7 +48,8 @@ def parse_serial(bs, n: str):
                        '__PREVIOUSPAGE': '4GZf8TWEN3bVEucnXzt6mX48yJg707Q1BbEdhPXFx_uOqMzsU3A89-gBErwvKXTKMhlPPAT48HhBzgj2vATua6y-MYI1',
                        '__VIEWSTATE': bs.find(id='__VIEWSTATE').get('value')
                        }
-            resp = requests.post(url+"?searchText="+n.split(":")[0], data=payload)
+            n = n.split(":")[0]
+            resp = requests.post(url+"?searchText="+n, data=payload)
             bs = BeautifulSoup(resp.text, 'lxml')
 
         parts = bs.find('table', id='ctl00_BodyContentPlaceHolder_gridSpareBOM').find_all('tr', class_=re.compile('RowStyle|AlternateRowStyle'))
@@ -126,7 +127,6 @@ def print_headers():
 
 
 async def fetch_parse(c: AsyncClient, n: str):
-    print(f"Looking for number {n.split(':')[0]}")
     response = await c.get(url, params={"searchText": n.split(":")[0]})
 
     if response.status_code != 200:
