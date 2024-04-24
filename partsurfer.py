@@ -3,6 +3,7 @@
 import asyncio
 import sys
 import argparse
+import os.path
 
 import requests
 from httpx import AsyncClient
@@ -27,6 +28,8 @@ if len(sys.argv) == 1:
     parser.exit(1)
 
 if args.output:
+    if os.path.isfile(args.output):
+        args.skip_headers = True
     f = open(args.output, 'a', newline='')
 else:
     f = sys.stdout
