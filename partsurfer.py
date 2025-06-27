@@ -55,10 +55,10 @@ def parse_serial(bs, n: str):
             resp = requests.post(url+"?searchText="+n, data=payload)
             bs = BeautifulSoup(resp.text, 'lxml')
 
-        parts = bs.find('table', id='ctl00_BodyContentPlaceHolder_gridSpareBOM').find_all('tr', class_=re.compile('RowStyle|AlternateRowStyle'))
+        parts = bs.find('table', id='ctl00_BodyContentPlaceHolder_gridSpareBOM').find_all('tr', class_=re.compile(r'RowStyle|AlternateRowStyle'))
         for p in parts:
-            part = p.find('span', id=re.compile('ctl\d\d_BodyContentPlaceHolder_gridSpareBOM_ctl\d\d_lblspart\d'))
-            desc = p.find('span', id=re.compile('ctl\d\d_BodyContentPlaceHolder_gridSpareBOM_ctl\d\d_lblspartdesc\d'))
+            part = p.find('span', id=re.compile(r'ctl\d\d_BodyContentPlaceHolder_gridSpareBOM_ctl\d\d_lblspart\d'))
+            desc = p.find('span', id=re.compile(r'ctl\d\d_BodyContentPlaceHolder_gridSpareBOM_ctl\d\d_lblspartdesc\d'))
             try:
                 csv_writer.writerow([n, part.text, desc.text])
             except:
@@ -80,8 +80,8 @@ def parse_product(bs, n):
     try:
         parts = bs.find('div', id='ctl00_BodyContentPlaceHolder_dvProdinfo').find_all('tr')
         for p in parts:
-            part = p.find('a', id=re.compile('ctl\d\d_BodyContentPlaceHolder_rptRoot_ctl\d\d_gvProGeneral_ctl\d\d_lnkPartno'))
-            desc = p.find('span', id=re.compile('ctl\d\d_BodyContentPlaceHolder_rptRoot_ctl\d\d_gvProGeneral_ctl\d\d_lbldesc'))
+            part = p.find('a', id=re.compile(r'ctl\d\d_BodyContentPlaceHolder_rptRoot_ctl\d\d_gvProGeneral_ctl\d\d_lnkPartno'))
+            desc = p.find('span', id=re.compile(r'ctl\d\d_BodyContentPlaceHolder_rptRoot_ctl\d\d_gvProGeneral_ctl\d\d_lbldesc'))
             try:
                 csv_writer.writerow([n, part.text, desc.text])
             except:
@@ -93,10 +93,10 @@ def parse_product(bs, n):
 
 def parse_part(bs, n):
     try:
-        parts = bs.find('table', id='ctl00_BodyContentPlaceHolder_gvGeneral').find_all('tr', class_=re.compile('RowStyle|AlternateRowStyle'))
+        parts = bs.find('table', id='ctl00_BodyContentPlaceHolder_gvGeneral').find_all('tr', class_=re.compile(r'RowStyle|AlternateRowStyle'))
         for p in parts:
-            part = p.find('span', id=re.compile('ctl\d\d_BodyContentPlaceHolder_gvGeneral_ctl\d\d_lnkPartno'))
-            desc = p.find('span', id=re.compile('ctl\d\d_BodyContentPlaceHolder_gvGeneral_ctl\d\d_lblpartdesc\d'))
+            part = p.find('span', id=re.compile(r'ctl\d\d_BodyContentPlaceHolder_gvGeneral_ctl\d\d_lnkPartno'))
+            desc = p.find('span', id=re.compile(r'ctl\d\d_BodyContentPlaceHolder_gvGeneral_ctl\d\d_lblpartdesc\d'))
             try:
                 csv_writer.writerow([part.text, desc.text])
             except:
@@ -138,7 +138,7 @@ async def fetch_parse(c: AsyncClient, n: str):
 
     page = BeautifulSoup(response.text, 'lxml')
 
-    if page.find('span', class_=re.compile('ctl00_BodyContentPlaceHolder_lblErrorMsg')):
+    if page.find('span', class_=re.compile(r'ctl00_BodyContentPlaceHolder_lblErrorMsg')):
         print("Internal server error occurred", file=sys.stderr)
         sys.exit(1)
 
